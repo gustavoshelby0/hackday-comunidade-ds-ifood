@@ -12,20 +12,23 @@
 
 ### Contexto da empresa
 
-**Stakeholder:** CEO da Netflix — visão executiva, decisão estratégica, não operacional. Isso significa que o output final precisa ser enxuto e direcionado a decisão, não um relatório exploratório extenso.
+Consumidor da análise: CEO — ou seja, a análise precisa ser executiva: poucas métricas-chave, conclusões diretas, e recomendações acionáveis (não um relatório técnico extenso). Gráficos e números devem responder "o que fazer" mais do que "como calculamos".
 
-**Dor principal:** Entender quais filmes performaram bem — cruzando dois eixos de sucesso:
+Dor / pergunta central:
 
-- Sucesso comercial/financeiro → receita, ROI (`revenue`, `budget`)
-- Sucesso de captura/engajamento de audiência → alcance e recepção do público (`popularity`, `vote_count`, `vote_average`)
+A operação de entrega está com atrasos, e não está claro se o gargalo é o restaurante (demora para preparar/liberar o pedido), o entregador (demora na coleta/deslocamento), ou o modelo de entrega/rota (design operacional — modal, tipo de rota, distância). Também não se sabe se isso se concentra em restaurantes específicos, horários de pico, ou regiões.
 
-Isso é importante porque um filme pode "capturar audiência" (muita gente vê/avalia) sem necessariamente ser o mais lucrativo, e vice-versa — vamos precisar segmentar os filmes nesses dois eixos (ex: uma matriz tipo "sucesso de bilheteria x sucesso de audiência") em vez de tratar "sucesso" como um número único.
+Isso se traduz em 3 perguntas operacionais:
 
-**Decisão a embasar:** Você mencionou "tomar uma decisão com base nos dados" — isso ainda está genérico. Como é uma análise para o CEO, geralmente esse tipo de decisão cai em uma (ou mais) dessas categorias:
+Quem — quais restaurantes puxam a operação pra baixo?
+Quando/onde — existe padrão por horário, dia da semana ou geografia (proxy: distância, já que não há coluna de região explícita — vale confirmar se isso é uma limitação da base)?
+Por quê — a causa raiz é do restaurante, do entregador, ou do modelo/rota de entrega?
 
-- Onde investir mais (quais gêneros/países/diretores repetir)
-- Onde cortar/reduzir investimento (o que não performou)
-- Que tipo de conteúdo priorizar no catálogo/produção futura
+Decisões que a análise precisa embasar:
+
+Diagnóstico dos principais pontos de falha na operação.
+Métricas de comparação de performance entre restaurantes (um scorecard/ranking).
+Recomendações práticas baseadas em evidência para reduzir atrasos.
 
 ## Premissas da análise
 
@@ -41,7 +44,7 @@ As perguntas abertas são um tipo de demanda muito comum em análise de dados na
 
 Para essa análise, foi definida a seguinte pergunta aberta:
 
-> **Quais são os melhores filmes? Melhores diretores? Sobre o faturamento por filme, a empresa está negativa ou positiva?**
+> **como esta sendo a velocidade de entrega dos pedidos do Ifood, sendo eles entregues pela propia empresa, e sobre os gargalos referentes a atrasos nos pedidos, e saber quais sao as causas**
 
 ### Passo 2: Transformar pergunta aberta em fechada
 
@@ -49,7 +52,7 @@ As perguntas fechadas são um tipo de demanda muito comum na área de análise d
 
 Para essa análise, foi definida a seguinte pergunta fechada:
 
-> **Pergunta Fechada:** Faça uma análise exploratória de cada aspecto que abrange os filmes do catálogo da empresa, diretores, faturamento por filme, a lei de Pareto em relação a filmes, e quais são os nichos que estão sendo negligenciados.
+> **Pergunta Fechada:** Faça uma análise exploratória de cada aspecto que abrange a entrega dos produtos ao cliente, qual a margem de suguranca das entregas? quem normalmente mais faz atrasar as entregas do ifood? a empresas sao eficientes no tempo? ou o ifood nao esta sendo eficiente
 
 ### Passo 3: Definição da Coluna Fato
 
@@ -59,85 +62,86 @@ O **Fato** é a coluna de interesse que representa o ponto focal da análise.
 
 ### Passo 4: Identificação das Dimensões
 
-#### Entendimento da Base de Dados
-
-**📋 Overview da estrutura (16.000 filmes × 18 colunas)**
-
-| Coluna | Tipo | O que representa | Significado de negócio |
-| :--- | :--- | :--- | :--- |
-| `show_id` | int | ID único do título | Chave primária, sem valor analítico direto |
-| `type` | texto | Tipo de conteúdo (100% "Movie") | Sem variância — não discrimina nada nesta base |
-| `title` | texto | Nome do filme | Identificação para relatórios/rankings |
-| `director` | texto | Diretor(es) | Permite avaliar quais diretores entregam sucesso consistente (financeiro e de audiência) |
-| `cast` | texto (lista) | Elenco principal | Permite avaliar "poder de atração" de atores — quem puxa audiência/receita |
-| `country` | texto (lista) | País(es) de produção | Entender origem geográfica do conteúdo de sucesso — relevante para decisões de produção regional |
-| `date_added` | data | Data que o título "entrou" na base/catálogo | Proxy de disponibilidade — permite análise de tendência temporal de catálogo |
-| `release_year` | int | Ano de lançamento do filme | Separar "quando foi feito" de "quando entrou no catálogo" — útil para ver se filmes antigos ainda performam |
-| `rating` | float (0-10) | Classificação numérica — na prática é idêntica a `vote_average` | Provavelmente redundante; preciso confirmar/depurar |
-| `duration` | float | Duração em minutos | 100% nula — inutilizável |
-| `genres` | texto (lista) | Gênero(s) do filme | Principal variável para segmentar "que tipo de conteúdo funciona" |
-| `language` | texto | Idioma original | Entender se conteúdo em inglês domina ou se há sucesso multilíngue |
-| `description` | texto | Sinopse | Só serve para NLP (não é foco aqui) |
-| `popularity` | float | Score de popularidade (métrica tipo TMDB) | Proxy de "captura de audiência" — quanto o filme gerou de atenção/buzz |
-| `vote_count` | int | Número de avaliações recebidas | Segundo proxy de alcance — quantas pessoas se engajaram o suficiente para avaliar |
-| `vote_average` | float | Nota média das avaliações | Proxy de qualidade percebida, não de alcance |
-| `budget` | int ($) | Orçamento de produção | Custo — insumo para calcular retorno |
-| `revenue` | int ($) | Receita gerada | Proxy de sucesso financeiro/comercial |
+Overview da estrutura
+#	Coluna	Tipo	O que representa	Significado de negócio
+1	numero_pedido	ID	Identificador único do pedido	Chave primária — 1 linha = 1 pedido
+2	hora_data_pedido	datetime	Timestamp de criação do pedido	Permite análise por hora do dia, dia da semana, picos de demanda
+3	modelo_entrega	categórica	Quem opera a entrega: OWN_DELIVERY (frota própria do iFood), MARKET_PLACE_DELIVERY (entregador do próprio restaurante), ON_DEMAND, HYBRID	Define quem é o responsável operacional pela entrega — essencial para separar responsabilidade do iFood vs. do restaurante
+4	tipo_entrega	categórica	Só tem o valor ORDINARY	Sem variância — não discrimina nada, pode ser descartada
+5	tipo_rota	categórica	SINGLE_PICK_SINGLE_DROP (uma coleta, uma entrega) vs SINGLE_PICK_MULTI_DROP (uma coleta, múltiplas entregas)	Rotas multi-drop tendem a ser mais lentas por pedido — é uma variável de desenho operacional
+6	modal	categórica	Veículo do entregador: moto, bike, e-bike	Afeta velocidade/capacidade — moto domina (92%)
+7	tipo_loja	categórica	Restaurante vs mercado	Perfis de preparo muito diferentes (mercado pode ter picking mais lento, restaurante tem tempo de cozinha)
+8	id_loja	ID	Identificador da loja	Chave para o scorecard de performance por restaurante que o CEO pediu
+9	id_rota	ID	Identificador da rota do entregador	Quase 1:1 com pedido (149.508 rotas p/ 153.604 pedidos) — múltiplos pedidos podem compartilhar rota em multi-drop
+10	tempo_real_ate_restaurante_seg	numérica	Tempo real do entregador até chegar ao restaurante	Mede a etapa de deslocamento do entregador até a coleta
+11	tempo_estimado_ate_restaurante_seg	numérica	Estimativa da plataforma para essa etapa	Benchmark de comparação (real vs. promessa)
+12	tempo_real_ate_coleta_seg	numérica	Tempo real total até o entregador coletar o pedido no restaurante	Inclui deslocamento + tempo de espera no restaurante — é aqui que aparece o atraso de preparo
+13	tempo_entrega_real_seg	numérica	Tempo real do pedido até a entrega no cliente	KPI-mestre de experiência do cliente
+14	tempo_entrega_estimado_seg	numérica	Promessa de entrega total dada ao cliente	Benchmark para medir cumprimento de SLA
+15	flag_atraso_pedido	booleana	Se o pedido atrasou (fim a fim) em relação à promessa	Métrica-chave de resultado — o que o cliente sente
+16	atraso_pedido_seg	numérica	Quantos segundos de atraso no pedido	Magnitude do atraso final
+17	flag_atraso_entregador	booleana	Se houve atraso atribuído ao entregador	Diagnóstico de causa — etapa de deslocamento/coleta
+18	atraso_entregador_seg	numérica	Magnitude desse atraso	
+19	flag_atraso_restaurante	booleana	Se houve atraso atribuído ao restaurante	Diagnóstico de causa — etapa de preparo/liberação
+20	atraso_restaurante_seg	numérica	Magnitude desse atraso	
+21	distancia_restaurante_cliente_km	numérica	Distância da entrega (loja→cliente)	Fator estrutural que explica parte do tempo de entrega
+22	distancia_ate_restaurante_km	numérica	Distância do entregador até a loja no momento do aceite	Fator estrutural da etapa de coleta
 
 ---
 
 ### Passo 5: Hipóteses Analíticas
 
-**H1 — Nem todos os gêneros geram receita proporcional ao volume de filmes produzidos**
+H1 — O atraso não é distribuído igualmente entre restaurantes; poucos "restaurantes-problema" concentram a maior parte do impacto (padrão 80/20).
 
-Lógica: Gêneros como Ação/Aventura tendem a ter orçamentos maiores (efeitos especiais, elenco caro) e por isso podem gerar receita média mais alta, enquanto Drama/Comédia podem ser mais numerosos mas com retorno médio menor.
-Como testar: Explodir `genres` (split por vírgula), agrupar por gênero e calcular receita média/mediana (filtrando `revenue > 0`), comparando com a contagem de filmes por gênero.
+Lógica: já vimos que 76% dos atrasos finais vêm do componente restaurante. Se isso for um problema generalizado (todo restaurante atrasa um pouco), a solução é sistêmica. Se for concentrado em poucas lojas, a solução é pontual (intervenção direcionada).
+Como testar: agrupar por id_loja, calcular taxa de atraso (flag_atraso_pedido) e atraso médio (atraso_restaurante_seg) por loja, ordenar decrescente e construir curva de Pareto (% acumulado de atrasos vs. % de lojas). Filtrar por volume mínimo de pedidos para evitar ruído estatístico em lojas com poucos pedidos.
 
-**H2 — Gêneros com maior popularidade não são necessariamente os mais bem avaliados**
+H2 — Restaurantes com maior volume de pedidos têm taxa de atraso pior (efeito de sobrecarga operacional na cozinha).
 
-Lógica: Ação/franquias podem gerar muito buzz (`popularity`, `vote_count`) mas nota mediana (`vote_average`) mais baixa que gêneros de nicho como Documentário ou Drama, que têm menos volume mas público mais "engajado com qualidade".
-Como testar: Agrupar por gênero e comparar `popularity`/`vote_count` médios vs `vote_average` médio — ver se a correlação entre os dois grupos de métricas é fraca ou até negativa.
+Lógica: cozinhas com muitos pedidos simultâneos podem ter gargalo de preparo, gerando atraso do restaurante desproporcional ao volume.
+Como testar: correlacionar volume de pedidos por loja (count por id_loja) com taxa de flag_atraso_restaurante por loja. Testar também dentro do mesmo dia — picos de volume horário por loja vs. atraso naquele horário.
+Bloco B — Quando/onde: padrões temporais e estruturais
 
-**💰 Eixo Financeiro**
+H3 — O atraso é maior em horários de pico (almoço e jantar) do que em horários de baixa demanda.
 
-**H3 — Orçamento maior não garante receita maior (retorno decrescente)**
+Lógica: picos de demanda pressionam tanto a cozinha (mais pedidos simultâneos) quanto a frota de entregadores (mais rotas disputando os mesmos entregadores disponíveis), então atraso deveria subir nesses períodos.
+Como testar: extrair hora do dia de hora_data_pedido, agrupar taxa de atraso e atraso médio por faixa horária (ex: bins de 1h ou períodos: manhã/almoço/tarde/jantar/noite). Visualizar como série por hora.
 
-Lógica: Existe um patamar em que aumentar o orçamento deixa de trazer ganho proporcional de receita — ou seja, ROI cai para blockbusters muito caros.
-Como testar: No subconjunto com `budget > 0` e `revenue > 0`, calcular correlação entre `budget` e `revenue`, e também `revenue/budget` (ROI) por faixa de orçamento (quartis). Se ROI cair nos quartis mais altos, a hipótese se confirma.
+H4 — Existe padrão por dia da semana (ex: fins de semana atrasam mais que dias úteis).
 
-**H4 — Um pequeno grupo de diretores/atores concentra a maior parte do sucesso financeiro**
+Lógica: fim de semana costuma ter volume de pedidos maior em delivery, o que pode saturar cozinhas e frota da mesma forma que H3, mas numa escala diária.
+Como testar: extrair dia da semana de hora_data_pedido, comparar taxa de atraso e atraso médio entre dias. Atenção: a base cobre só 7 dias (6-12 abr/2020), então dá pra comparar dias individualmente, mas não generalizar padrão sazonal com robustez estatística.
 
-Lógica: Segue o princípio de Pareto — poucos nomes "puxam" a maior parte da receita, sugerindo que aposta em nomes recorrentes reduz risco.
-Como testar: Explodir `cast` e `director`, somar `revenue` por pessoa, ordenar decrescente e calcular % acumulado de receita pelos top 10/20% de nomes.
+H5 — Distância maior (loja→cliente e entregador→loja) está associada a mais atraso.
 
-**H5 — País/idioma de produção influencia o teto de receita**
+Lógica: hipótese estrutural óbvia — trajetos mais longos aumentam a chance de atraso por trânsito, imprevistos, etc. Mas também testa se a plataforma já compensa isso corretamente na estimativa.
+Como testar: correlação entre distancia_restaurante_cliente_km / distancia_ate_restaurante_km e atraso_pedido_seg. Segmentar por faixas de distância (curta/média/longa) e comparar taxa de atraso. Importante: comparar contra o tempo estimado também — se a estimativa já é proporcional à distância, o efeito no atraso pode ser pequeno mesmo com trajetos longos.
+Bloco C — Por quê: causa raiz (restaurante x entregador x modelo)
 
-Lógica: Filmes em inglês / produzidos nos EUA podem ter teto de receita muito mais alto por causa do alcance de distribuição global, enquanto produções locais (outros idiomas) têm teto mais baixo mesmo quando bem avaliadas.
-Como testar: Agrupar por `language` (e/ou `country` mais frequente na lista) e comparar `revenue` médio/máximo, com `vote_average` médio ao lado para ver se a diferença é de qualidade ou só de mercado/distribuição.
+H6 — O modelo de entrega (modelo_entrega) influencia a taxa de atraso — MARKET_PLACE_DELIVERY (entregador do próprio restaurante) atrasa mais que OWN_DELIVERY (frota do iFood).
 
-**👀 Eixo Captura de Audiência**
+Lógica: a frota própria do iFood tende a ter processos padronizados e otimização de roteirização; entregadores do restaurante podem ter menos eficiência logística, gerando mais atraso por entregador.
+Como testar: comparar flag_atraso_pedido, flag_atraso_entregador e atraso_pedido_seg médio entre as categorias de modelo_entrega. Atenção ao desbalanceamento (OWN_DELIVERY é 91% da base) — usar médias e proporções, não só contagem absoluta.
 
-**H6 — Volume de avaliações (vote_count) é mais estável que popularidade instantânea**
+H7 — Rotas multi-drop (SINGLE_PICK_MULTI_DROP) têm atraso maior por pedido do que rotas single-drop.
 
-Lógica: `popularity` pode ser um score volátil (picos de buzz recente), enquanto `vote_count` acumula engajamento ao longo do tempo — bons indicadores de "sucesso duradouro" vs "sucesso passageiro" podem divergir.
-Como testar: Comparar o ranking de top 20 filmes por `popularity` vs top 20 por `vote_count` — quanto menor a sobreposição, mais essa hipótese se sustenta.
+Lógica: ao entregar vários pedidos numa rota só, o entregador naturalmente demora mais para cada entrega individual, o que pode inflar o tempo de entrega real e gerar mais atraso — mesmo sendo mais eficiente em custo agregado.
+Como testar: comparar tempo_entrega_real_seg e flag_atraso_pedido entre tipo_rota. Ver se tempo_entrega_estimado_seg já é ajustado para multi-drop (ou seja, se a estimativa é realista) ou se a promessa não reflete a complexidade da rota.
 
-**H7 — Filmes mais antigos ainda concentram grande parte do engajamento (efeito "clássico")**
+H8 — O modal do entregador (moto vs. bike) afeta o atraso, especialmente combinado com distância.
 
-Lógica: Filmes de anos passados podem ter `vote_count` alto acumulado mesmo sem estarem mais "no radar" via `popularity`, sugerindo que catálogo antigo ainda sustenta audiência.
-Como testar: Agrupar por `release_year`, comparar `vote_count` médio/total e `popularity` médio por ano — ver se anos mais antigos têm `vote_count` alto mas `popularity` baixo (relativo aos mais recentes).
+Lógica: bikes são mais lentas e mais sensíveis a distâncias longas; se restaurantes com entregas de bike tiverem distâncias parecidas às de moto, o atraso deveria ser sistematicamente maior nesse modal.
+Como testar: comparar atraso médio e taxa de atraso por modal, controlando por faixa de distância (para não confundir "bike atrasa mais" com "bike é usada em regiões mais distantes", por exemplo).
 
-**🔀 Eixo Cruzado (Financeiro x Audiência) — o núcleo da pergunta do CEO**
+H9 — A estimativa de tempo (tempo_entrega_estimado_seg) está mal calibrada — sistematicamente otimista — o que gera atraso "artificial" mesmo com operação estável.
 
-**H8 — Existem quatro perfis distintos de filme: "sucesso duplo", "hit de bilheteria sem prestígio", "joia escondida" e "fracasso duplo"**
+Lógica: se o tempo real médio é consistentemente maior que o estimado, o problema não é só operacional, é também de política de SLA/promessa — a plataforma pode estar prometendo prazos irreais.
+Como testar: calcular a diferença sistemática tempo_entrega_real_seg - tempo_entrega_estimado_seg (média e distribuição) para o total da base e por segmento (loja, modelo de entrega, horário). Se a média for consistentemente positiva mesmo em operação "normal" (baixo volume, curta distância), é evidência de estimativa mal calibrada, não de falha operacional pontual.
 
-Lógica: Sucesso financeiro e captura de audiência/qualidade não são a mesma coisa — um filme pode ter receita alta e nota baixa (blockbuster "vazio"), ou nota alta e receita baixa (cult hit sem alcance).
-Como testar: Criar uma matriz 2x2 usando medianas como corte: eixo X = `revenue` (ou ROI), eixo Y = combinação de `popularity`/`vote_average`. Classificar cada filme em um dos 4 quadrantes e contar quantos caem em cada um — dá para o CEO ver a distribuição do catálogo nesses perfis.
+H10 — O atraso do restaurante "silencioso" (que não vira atraso final, os 30% que vimos na etapa 2) mascara um problema de preparo mais amplo do que os KPIs de atraso sugerem.
 
-**H9 — Nota alta (vote_average) não é o principal preditor de receita**
-
-Lógica: Se o objetivo é entender "o que gera sucesso comercial", a hipótese é que `popularity` e `vote_count` (proxies de alcance) têm correlação mais forte com `revenue` do que a qualidade percebida (`vote_average`) — ou seja, alcance > qualidade para prever bilheteria.
-Como testar: Calcular matriz de correlação entre `revenue` e as três métricas (`popularity`, `vote_count`, `vote_average`) no subconjunto financeiro válido, comparando os coeficientes.
+Lógica: se o buffer da estimativa absorve boa parte do atraso do restaurante, o KPI oficial de atraso pode estar subestimando o real problema de eficiência operacional das cozinhas — relevante porque o CEO quer diagnosticar causa raiz, não só o sintoma final.
+Como testar: calcular a taxa de flag_atraso_restaurante = True independente de flag_atraso_pedido, e comparar o tamanho desse "buffer absorvido" (atraso_restaurante_seg quando flag_atraso_pedido = False) entre lojas — lojas que dependem muito desse buffer podem estar mais expostas a risco de atraso real se o volume aumentar.
 
 ---
 
@@ -148,30 +152,27 @@ Como testar: Calcular matriz de correlação entre `revenue` e as três métrica
 
 ### Passo 7: Priorização das Hipóteses Analíticas
 
-### ✅ Validação das hipóteses com os dados
+Validação com os dados
 
-Validou hipóteses de receita e identificou mecanismos acionáveis prioritários.
+✅ H1 — CONFIRMADA (forte). Os 20% de restaurantes com pior desempenho concentram 79% de todos os atrasos da base — um padrão de Pareto quase de manual. Isso confirma que o problema é de concentração, não generalizado, e justifica ação direcionada em vez de uma política igual para todas as lojas.
 
-#### ✅ Resultado da validação — Etapa 4
+❌ H2 — REFUTADA. Correlação entre volume de pedidos por loja e taxa de atraso do restaurante é praticamente zero (0,008). Comparando por quartil de volume, a taxa de atraso fica estável (~36–40%) independente do tamanho da loja. Volume não explica o atraso — o problema está em processo/gestão da loja, não em sobrecarga.
 
-| # | Hipótese | Nível Acionável | Resultado | Veredito |
-| :--- | :--- | :--- | :--- | :--- |
-| H8 | Matriz financeiro x audiência (4 perfis) | Alto | 37,2% Sucesso Duplo, 37,2% Fracasso Duplo, 12,8% Bilheteria sem Buzz, 12,8% Joia Escondida | ✅ Confirmada — a base de fato se divide em perfis distintos; quase 1 em cada 4 filmes está "descasado" entre os dois eixos |
-| H1 | Receita desproporcional por gênero | Alto | Adventure (R$265M méd.), Sci-Fi (R$253M), Animation (R$233M) no topo; Documentary (R$19M) e Drama (R$54M) na base, mesmo Drama tendo 1.662 filmes (o mais produzido) | ✅ Confirmada — gêneros mais produzidos não são os mais lucrativos |
-| H4 | Concentração de receita em poucos diretores | Alto | Top 10% dos diretores (230 de 2.306) concentram 72% de toda a receita do subconjunto financeiro | ✅ Fortemente confirmada — efeito Pareto muito acentuado |
-| H9 | Alcance prediz receita melhor que nota | Alto | Correlação com `revenue`: `vote_count` = 0,72 (forte), `popularity` = 0,23 (fraca) | ✅ Confirmada — alcance supera qualidade para prever receita |
-| H3 | Orçamento maior = ROI decrescente | Alto | Correlação `budget-revenue` = 0,75 (forte), mas ROI mediano por quartil de orçamento: Q1=1,60 → Q2=1,23 → Q3=1,45 → Q4=2,34 | ❌ Refutada — não há retorno decrescente; os orçamentos mais altos têm o melhor ROI mediano. "Apostar grande" tende a compensar mais, não menos |
-| H2 | Popularidade de gênero ≠ nota de gênero | Médio | Correlação `popularidade x nota` a nível de filme = 0,07 (praticamente nula). Ex: Animation tem popularidade alta E nota alta (6,74); Action tem popularidade alta mas nota mediana (6,07) | ✅ Confirmada — buzz e qualidade percebida são fenômenos quase independentes |
-| H5 | País/idioma define teto de receita | Médio | Inglês domina em volume (2.645 filmes, R$126M médio), mas idiomas como chinês (zh) aparecem no topo em receita média — com amostra pequena (n=65), sujeita a outliers | ⚠️ Inconclusiva — precisa filtro de amostra mínima e checagem de outliers antes de virar recomendação |
-| H7 | Filmes antigos sustentam engajamento (efeito clássico) | Médio | `vote_count` médio caiu nos últimos anos (de ~1.000 em 2016-19 para 260 em 2024), enquanto `popularity` subiu (de ~15 para 74) | ❌ Refutada como formulada — não é que filmes antigos "sustentam" engajamento; é que filmes recentes ainda não tiveram tempo de acumular avaliações (viés de acúmulo temporal). Isso é uma limitação metodológica, não um padrão de negócio real |
-| H6 | `Popularity` é mais volátil que `vote_count` | Baixo | Sobreposição entre top 20 `popularity` e top 20 `vote_count` = 0 filmes | ✅ Confirmada — são métricas completamente diferentes, mas o achado é mais diagnóstico que acionável |
+✅ H3 — CONFIRMADA. Existe um padrão horário claro: picos de atraso no almoço (11h–12h, ~11%) e jantar (19h–20h, ~11–12%), com vale entre 14h–17h (~7%). Confirma que o problema se intensifica nos horários de maior demanda.
 
-### 🚩 Achados críticos que mudam a leitura para o CEO
+⚠️ H4 — PARCIALMENTE CONFIRMADA. Sexta (11,5%) e domingo (11,4%) têm as maiores taxas; sábado (8,3%) e segunda (8,0%) as menores. Padrão existe, mas com apenas 7 dias de dados não dá pra afirmar que é sazonal e não uma variação pontual dessa semana específica — recomendo tratar como hipótese a confirmar com mais dados históricos.
 
-- A crença "gastar mais dá retorno decrescente" está errada nesta base — o oposto acontece. Isso é uma informação de alto impacto para decisão de investimento.
-- Nota de qualidade (`vote_average`) quase não se relaciona com receita nem com popularidade. Se o objetivo é "sucesso comercial", perseguir nota alta não é a alavanca certa — perseguir alcance (`vote_count`) sim.
-- 72% da receita em 10% dos diretores é o achado de maior potencial de ação direta: uma política de "apostar em nomes recorrentes" tem respaldo forte nos dados.
-- H7 revelou um viés estrutural nos dados (filmes recentes com menos tempo para acumular votos) — importante sinalizar isso como limitação na análise final, para não distorcer conclusões sobre "queda de qualidade recente".
+❌ H5 — REFUTADA. Correlação entre distância e atraso é quase nula (0,037 e 0,06). Mesmo comparando por faixa de distância (curta a longa), a taxa de atraso varia pouco (9,7% a 10,9%). Distância não é o driver principal — reforça que o problema é mais de processo do que de logística geográfica pura.
+
+✅ H6 — CONFIRMADA, mas em direção invertida à hipótese original. MARKET_PLACE_DELIVERY (entregador do restaurante) tem taxa de atraso final menor (6,8%) que OWN_DELIVERY (frota do iFood, 10,2%). E olhando o atraso do restaurante especificamente, MARKET_PLACE_DELIVERY também é menor (24,4% vs. 40,0% do OWN_DELIVERY). Um ponto de atenção: ON_DEMAND mostra 100% de flag de atraso do entregador — isso é estatisticamente estranho e merece investigação separada (pode ser particularidade de como esse modelo é medido, não necessariamente um problema operacional real).
+
+✅ H7 — CONFIRMADA. Rotas multi-drop têm taxa de atraso maior (12,3% vs. 9,8% em single-drop) e tempo de entrega real bem maior (2.467s vs. 1.583s). Importante: a plataforma já estima mais tempo para multi-drop (3.255s vs. 2.269s) — ou seja, o sistema sabe que multi-drop é mais lento, mas mesmo assim atrasa proporcionalmente mais.
+
+✅ H8 — CONFIRMADA. Bike tem taxa de atraso quase 50% maior que moto (14,9% vs. 9,5%), e essa diferença se mantém mesmo controlando por faixa de distância — ou seja, não é só porque bike pega rotas mais longas, é uma diferença estrutural do modal.
+
+❌ H9 — REFUTADA, e na direção oposta ao esperado. Na média, o tempo real é 692 segundos MENOR que o tempo estimado — a plataforma não está sendo otimista demais, está dando uma folga generosa na promessa ao cliente. Isso muda a leitura: o problema não é uma estimativa mal calibrada de forma otimista; é que, quando o processo falha, ele estoura até uma margem de segurança já bem folgada. Isso é um achado relevante — o "buffer" do sistema é grande, o que torna os 10% de atrasos ainda mais um sinal de falha real (não de meta irreal).
+
+✅ H10 — CONFIRMADA. Em média, 30% dos pedidos têm atraso do restaurante "absorvido" pelo buffer da estimativa (não vira atraso final). Mas isso varia muito por loja — algumas lojas têm 100% dos pedidos dependendo desse buffer para não atrasar oficialmente. Essas lojas estão operando "no limite": qualquer aumento de volume ou redução do buffer as levaria a atraso visível. É um sinal de risco escondido nos KPIs oficiais.
 
 ---
 
